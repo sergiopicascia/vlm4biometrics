@@ -61,9 +61,5 @@ bash experiments.sh
 This script runs zero-shot inference tasks using the three Gemma 3 model variants across the five biometric datasets.
 
 ### Analyzing Results
-Use the notebook:
-
-```bash
-results_analysis.ipynb
-```
+Use the notebook `results_analysis.ipynb` for comparison metrics and plots.
 
