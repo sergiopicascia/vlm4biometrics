@@ -13,8 +13,8 @@ Biometric recognition tasks are essential in various applications, including ide
 
 ### Datasets and Tasks
 - **LFW**: Face verification
-- **AgeDB**: Age estimation
-- **CASIA-Iris-Thousand**: Iris recognition
+- **AgeDB**: Age and Gender estimation
+- **CASIA-Iris-Thousand**: Iris verification
 - **FVC**: Fingerprint verification
 - **CelebA**: Attribute classification
 
