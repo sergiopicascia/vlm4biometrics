@@ -57,18 +57,37 @@ def parse_celeba_attributes(
 
 def calculate_metrics(labels, scores, attribute_name="Overall"):
     """Calculates FAR, FRR, Accuracy, EER, and AUC."""
-    labels_arr = np.array(labels)
-    scores_arr = np.array(scores)
+    labels = np.array(labels)
+    scores = np.array(scores)
 
-    fpr, tpr, thresholds = roc_curve(labels_arr, scores_arr, pos_label=1)
+    fpr, tpr, thresholds = roc_curve(labels, scores, pos_label=1)
     fnr = 1 - tpr
 
-    eer_index = np.nanargmin(np.abs(fpr - fnr))
-    eer_threshold = thresholds[eer_index]
-    eer = (fpr[eer_index] + fnr[eer_index]) / 2.0
+    # eer_index = np.nanargmin(np.abs(fpr - fnr))
+    # eer_threshold = thresholds[eer_index]
+    # eer = (fpr[eer_index] + fnr[eer_index]) / 2.0
 
-    predictions_at_eer = (scores_arr >= eer_threshold).astype(int)
-    accuracy_at_eer = np.mean(predictions_at_eer == labels_arr) * 100
+    t1_cand = np.where(fnr <= fpr)[0]
+    t2_cand = np.where(fnr >= fpr)[0]
+
+    t1 = t1_cand.min()
+    t2 = t2_cand.max()
+
+    if (fnr[t1] + fpr[t1]) <= (fnr[t2] + fpr[t2]):
+        eer_index = t1
+        eer_threshold = thresholds[eer_index]
+        eer_low = fnr[t1]
+        eer_high = fpr[t1]
+    else:
+        eer_index = t2
+        eer_threshold = thresholds[eer_index]
+        eer_low = fpr[t2]
+        eer_high = fnr[t2]
+
+    eer = np.mean([eer_low, eer_high])
+
+    predictions_at_eer = (scores >= eer_threshold).astype(int)
+    accuracy_at_eer = np.mean(predictions_at_eer == labels) * 100
 
     auc_score = np.trapezoid(tpr, fpr)
 
@@ -85,7 +104,11 @@ def calculate_metrics(labels, scores, attribute_name="Overall"):
     print("--------------------------------------------\n")
 
     return {
+        "scores": scores,
+        "labels": labels,
         "eer": eer,
+        "eer_low": eer_low,
+        "eer_high": eer_high,
         "threshold": eer_threshold,
         "accuracy_at_eer": accuracy_at_eer,
         "auc": auc_score,

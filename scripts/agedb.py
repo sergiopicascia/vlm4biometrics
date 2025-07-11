@@ -67,12 +67,12 @@ def parse_agedb_dataset(image_dir_path: Path):
 
 def calculate_age_metrics(true_ages, predicted_ages):
     """Calculates metrics for age estimation."""
-    true_ages_np = np.array(true_ages)
-    predicted_ages_np = np.array(predicted_ages)
+    true_ages = np.array(true_ages)
+    predicted_ages = np.array(predicted_ages)
 
-    mae = mean_absolute_error(true_ages_np, predicted_ages_np)
+    mae = mean_absolute_error(true_ages, predicted_ages)
     errors = (
-        predicted_ages_np - true_ages_np
+        predicted_ages - true_ages
     )  # Positive means overestimation, negative means underestimation
 
     # Cumulative Score (CS)
@@ -90,6 +90,8 @@ def calculate_age_metrics(true_ages, predicted_ages):
     print("------------------------------\n")
 
     return {
+        "labels": true_ages,
+        "scores": predicted_ages,
         "mae": mae,
         "cs_scores": cs_scores,
         "error_std": np.std(errors),
@@ -132,6 +134,8 @@ def calculate_gender_metrics(
     print("------------------------------\n")
 
     return {
+        "labels": true_genders_mapped,
+        "scores": predicted_genders,
         "accuracy": accuracy,
         "confusion_matrix": cm.tolist() if "cm" in locals() else None,
         "classification_report": report if "report" in locals() else None,
