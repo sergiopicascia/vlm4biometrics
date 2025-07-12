@@ -2,6 +2,7 @@ accelerate==1.6.0
 matplotlib==3.10.3
 pandas==2.2.3
 pillow==11.2.1
+properscoring==1.15.2
 scikit-learn==1.6.1
 torch==2.7.0
 torchvision==0.22.0
