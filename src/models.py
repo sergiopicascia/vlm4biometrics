@@ -73,6 +73,7 @@ class GemmaModel(BaseModel):
             add_generation_prompt=True,
             return_dict=True,
             return_tensors="pt",
+            padding=True,
         ).to(self.device)
 
         batch_scores = []
