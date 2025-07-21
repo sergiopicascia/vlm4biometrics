@@ -2,20 +2,49 @@
 Biometrics Evaluation Package.
 """
 
-# Expose the configuration object directly
 from . import config
 
-# Expose key classes and functions from each module
-from .data_loaders import LFWLoader
+from .data_loaders import (
+    LFWLoader,
+    CASIAIrisLoader,
+    FVCLoader,
+    AgeDBLoader,
+    CelebAAttributeLoader,
+)
 from .metrics import calculate_verification_metrics
 from .models import GemmaModel
-from .tasks import FaceVerificationTask
+from .tasks import (
+    FaceVerificationTask,
+    IrisVerificationTask,
+    FingerprintVerificationTask,
+    AgeEstimationTask,
+    GenderPredictionTask,
+    AttributePredictionTask,
+    VerificationMCQTask,
+    AgeEstimationMCQTask,
+    GenderPredictionMCQTask,
+    AttributePredictionMCQTask,
+)
+from .utils import extract_option_label
 
-# You can also define what `from src import *` would import
 __all__ = [
     "config",
     "LFWLoader",
+    "CASIAIrisLoader",
+    "FVCLoader",
+    "AgeDBLoader",
+    "CelebAAttributeLoader",
     "calculate_verification_metrics",
     "GemmaModel",
     "FaceVerificationTask",
+    "IrisVerificationTask",
+    "FingerprintVerificationTask",
+    "AgeEstimationTask",
+    "GenderPredictionTask",
+    "AttributePredictionTask",
+    "VerificationMCQTask",
+    "AgeEstimationMCQTask",
+    "GenderPredictionMCQTask",
+    "AttributePredictionMCQTask",
+    "extract_option_label",
 ]

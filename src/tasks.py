@@ -3,7 +3,8 @@ Task definitions for different biometric tasks.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
+import random
 from PIL import Image
 import numpy as np
 from .metrics import (
@@ -190,7 +191,7 @@ class AgeEstimationTask(BaseTask):
                         "text": "How old is the person in this image? Answer with only a number representing their age.",
                     },
                 ],
-            }
+            },
         ]
 
     def get_target_labels(self) -> List[str]:
@@ -232,7 +233,7 @@ class GenderPredictionTask(BaseTask):
                         "text": "What is the gender of the person in this image? Answer with only 'male' or 'female'.",
                     },
                 ],
-            }
+            },
         ]
 
     def get_target_labels(self) -> List[str]:
@@ -285,7 +286,7 @@ class AttributePredictionTask(BaseTask):
                     {"type": "image", "image": image},
                     {"type": "text", "text": prompt_text},
                 ],
-            }
+            },
         ]
 
     def get_target_labels(self) -> List[str]:
@@ -311,3 +312,184 @@ class AttributePredictionTask(BaseTask):
         return calculate_classification_metrics(
             true_labels_mapped, predicted_labels, labels=["no", "yes"]
         )
+
+
+class BaseMCQTask(ABC):
+    """
+    Abstract base class for all Multiple-Choice Question (MCQ) tasks.
+    """
+
+    def __init__(self, num_options: int):
+        if num_options < 2:
+            raise ValueError("MCQ tasks must have at least 2 options.")
+        self.num_options = num_options
+
+    def get_option_labels(self) -> List[str]:
+        """Returns a list of option characters, e.g., ['A', 'B', 'C']."""
+        return [chr(65 + i) for i in range(self.num_options)]
+
+    @abstractmethod
+    def _get_question(self, sample: Dict[str, Any]) -> str:
+        """Returns the question text for a given sample."""
+        pass
+
+    @abstractmethod
+    def _get_correct_option_text(self, sample: Dict[str, Any]) -> str:
+        """Returns the text of the correct answer for a given sample."""
+        pass
+
+    @abstractmethod
+    def _get_distractor_pool(self, sample: Dict[str, Any]) -> List[str]:
+        """Returns a list of all possible distractor texts for a given sample."""
+        pass
+
+    def generate_prompt_and_options(
+        self, sample: Dict[str, Any]
+    ) -> Tuple[str, List[str]]:
+        """
+        Generates a formatted MCQ prompt and returns the ordered list of option texts.
+
+        Returns:
+            A tuple containing:
+            - The full, formatted prompt string.
+            - The list of option texts in the order they appeared (e.g., ['Yes', 'No']).
+        """
+        correct_option = self._get_correct_option_text(sample)
+        distractor_pool = self._get_distractor_pool(sample)
+
+        # Select distractors randomly from the pool
+        num_distractors = self.num_options - 1
+        distractors = random.sample(distractor_pool, num_distractors)
+
+        # Create final options list and shuffle it
+        final_options = [correct_option] + distractors
+        random.shuffle(final_options)
+
+        # Format the prompt
+        option_labels = self.get_option_labels()
+        options_str = "\n".join(
+            [f"{label}. {text}" for label, text in zip(option_labels, final_options)]
+        )
+        question = self._get_question(sample)
+        prompt_text = f"{question}\n{options_str}"
+
+        return prompt_text, final_options
+
+    def evaluate(
+        self, correct_option_texts: List[str], predicted_option_texts: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Evaluates MCQ predictions using classification metrics.
+        This method is shared by all MCQ tasks.
+        """
+        # Filter out samples where the model's output could not be parsed
+        valid_true = [
+            true
+            for true, pred in zip(correct_option_texts, predicted_option_texts)
+            if pred is not None
+        ]
+        valid_pred = [pred for pred in predicted_option_texts if pred is not None]
+
+        # Get all unique labels for the classification report
+        all_labels = sorted(list(set(valid_true) | set(valid_pred)))
+
+        print(
+            f"Total Parsable Predictions: {len(valid_pred)}/{len(predicted_option_texts)}"
+        )
+
+        return calculate_classification_metrics(
+            valid_true, valid_pred, labels=all_labels
+        )
+
+
+class VerificationMCQTask(BaseMCQTask):
+    """MCQ Task for any binary verification (Face, Iris, Fingerprint)."""
+
+    def __init__(self, domain: str = "person"):
+        super().__init__(num_options=2)
+        self.domain = domain  # e.g., 'person', 'iris', 'finger'
+        self.options = ["Yes", "No"]
+
+    def _get_question(self, sample: Dict[str, Any]) -> str:
+        return f"Do these two images show the same {self.domain}?"
+
+    def _get_correct_option_text(self, sample: Dict[str, Any]) -> str:
+        return "Yes" if sample["label"] == 1 else "No"
+
+    def _get_distractor_pool(self, sample: Dict[str, Any]) -> List[str]:
+        correct = self._get_correct_option_text(sample)
+        return [opt for opt in self.options if opt != correct]
+
+
+class AgeEstimationMCQTask(BaseMCQTask):
+    """MCQ Task for binned age estimation."""
+
+    def __init__(self):
+        super().__init__(num_options=4)
+        self.age_bins = [
+            "0-9",
+            "10-19",
+            "20-29",
+            "30-39",
+            "40-49",
+            "50-59",
+            "60-69",
+            "70-79",
+            "80-90",
+            "91-101",
+        ]
+
+    def _get_question(self, sample: Dict[str, Any]) -> str:
+        return "What is the age range of the person shown in the image?"
+
+    def _get_age_bin(self, age: int) -> str:
+        """Helper to find the correct bin for a given age."""
+        for bin_str in self.age_bins:
+            low, high = map(int, bin_str.split("-"))
+            if low <= age <= high:
+                return bin_str
+        return None
+
+    def _get_correct_option_text(self, sample: Dict[str, Any]) -> str:
+        return self._get_age_bin(sample["age"])
+
+    def _get_distractor_pool(self, sample: Dict[str, Any]) -> List[str]:
+        correct_bin = self._get_correct_option_text(sample)
+        return [b for b in self.age_bins if b != correct_bin]
+
+
+class GenderPredictionMCQTask(BaseMCQTask):
+    """MCQ Task for gender prediction."""
+
+    def __init__(self):
+        super().__init__(num_options=2)
+        self.options = ["male", "female"]
+
+    def _get_question(self, sample: Dict[str, Any]) -> str:
+        return "What is the gender of the person in this image?"
+
+    def _get_correct_option_text(self, sample: Dict[str, Any]) -> str:
+        return "male" if sample["gender"] == "m" else "female"
+
+    def _get_distractor_pool(self, sample: Dict[str, Any]) -> List[str]:
+        correct = self._get_correct_option_text(sample)
+        return [opt for opt in self.options if opt != correct]
+
+
+class AttributePredictionMCQTask(BaseMCQTask):
+    """MCQ Task for CelebA attribute prediction."""
+
+    def __init__(self):
+        super().__init__(num_options=2)
+        self.options = ["Yes", "No"]
+
+    def _get_question(self, sample: Dict[str, Any]) -> str:
+        prompt_attr_name = sample["attribute_name"].replace("_", " ").lower()
+        return f"Does the person in the image have the attribute '{prompt_attr_name}'?"
+
+    def _get_correct_option_text(self, sample: Dict[str, Any]) -> str:
+        return "Yes" if sample["label"] == 1 else "No"
+
+    def _get_distractor_pool(self, sample: Dict[str, Any]) -> List[str]:
+        correct = self._get_correct_option_text(sample)
+        return [opt for opt in self.options if opt != correct]
