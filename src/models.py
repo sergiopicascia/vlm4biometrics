@@ -4,10 +4,11 @@ Each handler encapsulates model-specific loading and inference logic.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import numpy as np
 import torch
 from transformers import AutoProcessor, AutoModelForCausalLM
+from .utils import extract_option_label
 
 
 class BaseModel(ABC):
@@ -20,7 +21,7 @@ class BaseModel(ABC):
         self.device = device
 
     @abstractmethod
-    def get_label_scores(
+    def get_log_probs(
         self, batch_prompts: List[List[Dict[str, Any]]], target_labels: List[str]
     ) -> np.ndarray:
         """
@@ -59,7 +60,7 @@ class GemmaModel(BaseModel):
             self.eot_token, add_special_tokens=False
         )
 
-    def get_label_scores(
+    def get_log_probs(
         self, batch_prompts: List[List[Dict[str, Any]]], target_labels: List[str]
     ) -> np.ndarray:
         label_sequences = []
@@ -140,3 +141,46 @@ class GemmaModel(BaseModel):
         scores_tensor = torch.stack(batch_scores, dim=1)
         probs = torch.softmax(scores_tensor, dim=-1)
         return probs.cpu().numpy()
+
+    def get_mcq_predictions(
+        self,
+        batch_prompts: List[List[Dict[str, Any]]],
+        option_labels: List[str],
+        options_text: List[str],
+    ) -> List[Optional[str]]:
+        """
+        Generates text for a batch of prompts and parses the output to find
+        the selected multiple-choice option.
+        """
+        inputs = self.processor.apply_chat_template(
+            batch_prompts,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_dict=True,
+            return_tensors="pt",
+            padding=True,
+        ).to(self.device)
+
+        with torch.inference_mode():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=50,  # Generate a reasonable number of tokens
+                do_sample=False,
+                top_k=None,
+                top_p=None,
+                temperature=None,
+                pad_token_id=self.tokenizer.pad_token_id
+            )
+
+        # Decode generated sequences, skipping prompt tokens
+        decoded_outputs = self.tokenizer.batch_decode(
+            outputs[:, inputs.input_ids.shape[1] :], skip_special_tokens=True
+        )
+
+        # Parse each decoded output string
+        parsed_predictions = [
+            extract_option_label(output, option_labels, options_text)
+            for output in decoded_outputs
+        ]
+
+        return parsed_predictions

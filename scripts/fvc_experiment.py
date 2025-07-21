@@ -27,7 +27,7 @@ def run_inference_on_samples(samples, task, model, batch_size):
     ):
         batch_samples = samples[i : min(i + batch_size, len(samples))]
         batch_prompts = [task.get_prompt(sample) for sample in batch_samples]
-        batch_scores = model.get_label_scores(batch_prompts, target_labels)
+        batch_scores = model.get_log_probs(batch_prompts, target_labels)
         all_scores.append(batch_scores)
 
     return np.concatenate(all_scores, axis=0) if all_scores else np.array([])

@@ -32,7 +32,7 @@ def main(args):
     for i in tqdm(range(0, len(samples), args.batch_size), desc="Processing Batches"):
         batch_samples = samples[i : min(i + args.batch_size, len(samples))]
         batch_prompts = [task.get_prompt(sample) for sample in batch_samples]
-        batch_scores = model.get_label_scores(batch_prompts, target_labels)
+        batch_scores = model.get_log_probs(batch_prompts, target_labels)
         all_scores.append(batch_scores)
 
     all_scores = np.concatenate(all_scores, axis=0)

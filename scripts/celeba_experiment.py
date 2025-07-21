@@ -35,7 +35,7 @@ def main(args):
     ):
         batch_samples = samples[i : min(i + args.batch_size, len(samples))]
         batch_prompts = [task.get_prompt(s) for s in batch_samples]
-        batch_scores = model.get_label_scores(batch_prompts, target_labels)
+        batch_scores = model.get_log_probs(batch_prompts, target_labels)
         all_scores.append(batch_scores)
 
     all_scores = np.concatenate(all_scores, axis=0)
@@ -59,7 +59,6 @@ def main(args):
         attr_labels = data["labels"]
         attr_scores = np.array(data["scores"])
 
-        # We use the task's evaluate method, which now uses calculate_classification_metrics
         final_metrics[attr_name] = task.evaluate(attr_labels, attr_scores)
 
         all_true_labels_flat.extend(attr_labels)

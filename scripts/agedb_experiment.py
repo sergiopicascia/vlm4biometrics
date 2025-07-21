@@ -45,7 +45,7 @@ def main(args):
             ]
 
             # Use the generic model interface to get scores for this task's labels
-            batch_scores = model.get_label_scores(batch_prompts, target_labels)
+            batch_scores = model.get_log_probs(batch_prompts, target_labels)
             all_scores.append(batch_scores)
 
         all_scores = np.concatenate(all_scores, axis=0)
