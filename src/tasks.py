@@ -178,6 +178,10 @@ class AgeEstimationTask(BaseTask):
         image = Image.open(str(sample["image_paths"][0])).convert("RGB")
         return [
             {
+                "role": "system",
+                "content": [{"type": "text", "text": "You are a helpful assistant."}],
+            },
+            {
                 "role": "user",
                 "content": [
                     {"type": "image", "image": image},
@@ -215,6 +219,10 @@ class GenderPredictionTask(BaseTask):
     def get_prompt(self, sample: Dict[str, Any]) -> List[Dict[str, Any]]:
         image = Image.open(str(sample["image_paths"][0])).convert("RGB")
         return [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "You are a helpful assistant."}],
+            },
             {
                 "role": "user",
                 "content": [
@@ -267,6 +275,10 @@ class AttributePredictionTask(BaseTask):
         )
 
         return [
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "You are a helpful assistant."}],
+            },
             {
                 "role": "user",
                 "content": [
