@@ -1,5 +1,24 @@
 import re
 from typing import List, Optional
+from .models import BaseModel, Gemma3Model, Qwen3VLModel, InternVL3_5Model
+
+
+def get_model(model_path: str, device: str) -> BaseModel:
+    """
+    Factory function to return the correct model class based on the model path string.
+    """
+    path_lower = model_path.lower()
+
+    if "gemma" in path_lower:
+        return Gemma3Model(model_path, device)
+    elif "qwen" in path_lower:
+        return Qwen3VLModel(model_path, device)
+    elif "internvl" in path_lower:
+        return InternVL3_5Model(model_path, device)
+    else:
+        raise ValueError(
+            f"Unknown model family for path: {model_path}. Please update src/models.py"
+        )
 
 
 def extract_option_label(

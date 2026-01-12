@@ -20,7 +20,6 @@ from .utils import extract_option_label
 class BaseModel(ABC):
     """Abstract base class for Vision Language Models."""
 
-    @abstractmethod
     def __init__(
         self,
         model_path: str,
@@ -100,7 +99,6 @@ class BaseModel(ABC):
 
         return new_inputs
 
-    @abstractmethod
     def get_log_probs(
         self, batch_prompts: List[List[Dict[str, Any]]], target_labels: List[str]
     ) -> np.ndarray:
@@ -169,7 +167,6 @@ class BaseModel(ABC):
         probs = torch.softmax(scores_tensor, dim=-1)
         return probs.cpu().numpy()
 
-    @abstractmethod
     def get_mcq_predictions(
         self,
         batch_prompts: List[List[Dict[str, Any]]],
