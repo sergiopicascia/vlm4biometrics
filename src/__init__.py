@@ -12,7 +12,7 @@ from .data_loaders import (
     CelebAAttributeLoader,
 )
 from .metrics import calculate_verification_metrics
-from .models import GemmaModel
+from .models import Gemma3Model, Qwen3VLModel, InternVL3_5Model
 from .tasks import (
     FaceVerificationTask,
     IrisVerificationTask,
@@ -35,7 +35,9 @@ __all__ = [
     "AgeDBLoader",
     "CelebAAttributeLoader",
     "calculate_verification_metrics",
-    "GemmaModel",
+    "Gemma3Model",
+    "Qwen3VLModel",
+    "InternVL3_5Model",
     "FaceVerificationTask",
     "IrisVerificationTask",
     "FingerprintVerificationTask",
