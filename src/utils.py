@@ -30,7 +30,11 @@ def extract_option_label(
 
     # 2. If not found at the beginning, search the entire text for the pattern.
     # We use more general patterns here to find the label anywhere.
-    for pattern in label_patterns:
+    search_patterns = [
+        r"\b\(?([A-Za-z])\)?\b",  # Matches 'A', '(A)'
+        r"\bOption\s+([A-Za-z])\b",
+    ]
+    for pattern in search_patterns:
         matches = re.findall(pattern, model_output_clean)
         for label_match in matches:
             label = label_match.upper()
