@@ -13,7 +13,7 @@ sys.path.insert(0, str(project_root))
 from src import config
 from src.data_loaders import FVCLoader
 from src.tasks import FingerprintVerificationTask
-from src.models import GemmaModel
+from src.utils import get_model
 from src.metrics import average_metrics
 
 
@@ -37,7 +37,7 @@ def main(args):
     # --- Setup components ---
     loader = FVCLoader(fvc_datasets=args.fvc_datasets)
     task = FingerprintVerificationTask()
-    model = GemmaModel(model_path=args.model, device=args.device)
+    model = get_model(model_path=args.model, device=args.device)
 
     overall_results = {}
 

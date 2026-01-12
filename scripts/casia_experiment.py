@@ -13,7 +13,7 @@ sys.path.insert(0, str(project_root))
 from src import config
 from src.data_loaders import CASIAIrisLoader
 from src.tasks import IrisVerificationTask
-from src.models import GemmaModel
+from src.utils import get_model
 
 
 def main(args):
@@ -22,7 +22,7 @@ def main(args):
         num_total_pairs=args.num_pairs, random_seed=args.random_seed
     )
     task = IrisVerificationTask()
-    model = GemmaModel(model_path=args.model, device=args.device)
+    model = get_model(model_path=args.model, device=args.device)
 
     # Data Loading
     samples = loader.load()

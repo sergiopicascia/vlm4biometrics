@@ -14,14 +14,14 @@ sys.path.insert(0, str(project_root))
 from src import config
 from src.data_loaders import CelebAAttributeLoader
 from src.tasks import AttributePredictionTask
-from src.models import GemmaModel
+from src.utils import get_model
 
 
 def main(args):
     # Setup
     loader = CelebAAttributeLoader(partition_num=args.partition_num)
     task = AttributePredictionTask()
-    model = GemmaModel(model_path=args.model, device=args.device)
+    model = get_model(model_path=args.model, device=args.device)
 
     # Data Loading
     samples = loader.load()

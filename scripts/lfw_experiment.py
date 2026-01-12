@@ -13,13 +13,13 @@ sys.path.insert(0, str(project_root))
 from src import config
 from src.data_loaders import LFWLoader
 from src.tasks import FaceVerificationTask
-from src.models import GemmaModel
+from src.utils import get_model
 
 
 def main(args):
     loader = LFWLoader()
     task = FaceVerificationTask()
-    model = GemmaModel(model_path=args.model, device=args.device)
+    model = get_model(model_path=args.model, device=args.device)
 
     # Data Loading
     samples = loader.load()

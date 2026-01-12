@@ -13,13 +13,13 @@ sys.path.insert(0, str(project_root))
 from src import config
 from src.data_loaders import AgeDBLoader
 from src.tasks import AgeEstimationTask, GenderPredictionTask
-from src.models import GemmaModel
+from src.utils import get_model
 
 
 def main(args):
     # Setup
     loader = AgeDBLoader()
-    model = GemmaModel(model_path=args.model, device=args.device)
+    model = get_model(model_path=args.model, device=args.device)
 
     # Data Loading
     samples = loader.load()
