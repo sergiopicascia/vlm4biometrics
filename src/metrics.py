@@ -137,6 +137,15 @@ def calculate_age_estimation_metrics(
         expected_age = np.sum(age_probabilities * age_range, axis=1)
         metrics["expected_value_mae"] = mean_absolute_error(true_ages, expected_age)
 
+        # Standard Deviation of Expected Value Errors
+        expected_value_errors = expected_age - true_ages
+        metrics["expected_value_error_std"] = np.std(expected_value_errors)
+
+        # Mean Predicted Uncertainty
+        expected_sq_age = np.sum(age_probabilities * (age_range**2), axis=1)
+        predicted_variances = expected_sq_age - (expected_age**2)
+        metrics["mean_predicted_uncertainty"] = np.mean(np.sqrt(predicted_variances))
+
         # Weighted MAE
         absolute_errors_matrix = np.abs(
             true_ages[:, np.newaxis] - age_range[np.newaxis, :]
