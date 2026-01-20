@@ -13,6 +13,7 @@ from sklearn.metrics import (
     classification_report,
 )
 import properscoring as ps
+from scipy.stats import chi2_contingency
 
 
 def calculate_verification_metrics(labels, scores):
@@ -210,4 +211,83 @@ def calculate_classification_metrics(
         "accuracy": accuracy,
         "classification_report": report_dict,
         "confusion_matrix": cm.tolist(),
+    }
+
+
+def calculate_fairness_metrics(
+    true_labels: np.ndarray,
+    predicted_labels: np.ndarray,
+    sensitive_values: np.ndarray,
+    sensitive_attr_name: str,
+    target_attr_name: str,
+) -> Dict[str, Any]:
+    """
+    Calculates performance disparities between two attribute groups.
+    Assumes sensitive_values are binary (0 and 1).
+
+    Metrics computed:
+    - Accuracy Gap
+    - True Positive Rate (TPR) Gap (Equality of Opportunity)
+    - False Positive Rate (FPR) Gap
+    - Chi-Squared p-value for difference in error rates.
+    """
+    # Ensure inputs are numpy arrays
+    y_true = np.array(true_labels)
+    y_pred = np.array(predicted_labels)
+    groups = np.array(sensitive_values)
+
+    # Identify groups
+    indices_0 = np.where(groups == 0)[0]
+    indices_1 = np.where(groups == 1)[0]
+
+    # If one group is empty, we cannot compute fairness metrics
+    if len(indices_0) == 0 or len(indices_1) == 0:
+        return {"error": "One of the sensitive groups is empty."}
+
+    def get_metrics_for_indices(indices):
+        yt = y_true[indices]
+        yp = y_pred[indices]
+
+        # Accuracy
+        acc = np.mean(yt == yp)
+
+        # Confusion components
+        # TN, FP, FN, TP
+        tn, fp, fn, tp = confusion_matrix(yt, yp, labels=[0, 1]).ravel()
+
+        tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+
+        return {"acc": acc, "tpr": tpr, "fpr": fpr, "count": len(indices)}
+
+    metrics_0 = get_metrics_for_indices(indices_0)
+    metrics_1 = get_metrics_for_indices(indices_1)
+
+    # --- Statistical Significance (Chi-Square on Error Rates) ---
+    correct_0 = np.sum(y_true[indices_0] == y_pred[indices_0])
+    incorrect_0 = len(indices_0) - correct_0
+    correct_1 = np.sum(y_true[indices_1] == y_pred[indices_1])
+    incorrect_1 = len(indices_1) - correct_1
+
+    contingency_table = [[correct_0, incorrect_0], [correct_1, incorrect_1]]
+    try:
+        chi2, p_value, dof, ex = chi2_contingency(contingency_table)
+        significant_diff = p_value < 0.05
+    except Exception:
+        p_value = 1.0
+        significant_diff = False
+
+    return {
+        "sensitive_attribute": sensitive_attr_name,
+        "target_attribute": target_attr_name,
+        "group_0_stats": metrics_0,
+        "group_1_stats": metrics_1,
+        "accuracy_gap": metrics_0["acc"]
+        - metrics_1["acc"],  # Positive means Grp 0 is better
+        "tpr_gap": metrics_0["tpr"] - metrics_1["tpr"],  # Equal Opportunity Difference
+        "fpr_gap": metrics_0["fpr"] - metrics_1["fpr"],
+        "statistical_significance": {
+            "p_value": p_value,
+            "significant": significant_diff,
+        },
     }
