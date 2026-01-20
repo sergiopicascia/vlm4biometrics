@@ -15,11 +15,15 @@ from src import config
 from src.data_loaders import CelebAAttributeLoader
 from src.tasks import AttributePredictionTask
 from src.utils import get_model
+from src.metrics import calculate_fairness_metrics
 
 
 def main(args):
     # Setup
-    loader = CelebAAttributeLoader(partition_num=args.partition_num)
+    loader = CelebAAttributeLoader(
+        partition_num=args.partition_num,
+        sensitive_attributes=config.CELEBA_SENSITIVE_ATTRIBUTES,
+    )
     task = AttributePredictionTask()
     model = get_model(model_path=args.model, device=args.device)
 
@@ -42,13 +46,21 @@ def main(args):
 
     # Evaluate Metrics
     # Group results by attribute name
-    results_by_attribute = defaultdict(lambda: {"labels": [], "scores": []})
+    results_by_attribute = defaultdict(
+        lambda: {"labels": [], "scores": [], "sensitive_values": defaultdict(list)}
+    )
     for i, sample in enumerate(samples):
         attr_name = sample["attribute_name"]
         results_by_attribute[attr_name]["labels"].append(sample["label"])
         results_by_attribute[attr_name]["scores"].append(all_scores[i])
+        for sensitive_attr in config.CELEBA_SENSITIVE_ATTRIBUTES:
+            results_by_attribute[attr_name]["sensitive_values"][sensitive_attr].append(
+                sample["sensitive_metadata"].get(sensitive_attr, -1)
+            )
 
     final_metrics = {}
+    fairness_report = {}
+
     all_true_labels_flat = []
     all_scores_flat = []
 
@@ -60,6 +72,31 @@ def main(args):
         attr_scores = np.array(data["scores"])
 
         final_metrics[attr_name] = task.evaluate(attr_labels, attr_scores)
+
+        pred_indices = np.argmax(attr_scores, axis=1)
+        fairness_report[attr_name] = {}
+        for sensitive_attr in config.CELEBA_SENSITIVE_ATTRIBUTES:
+            if attr_name == sensitive_attr:
+                continue
+            sensitive_values = np.array(data["sensitive_values"][sensitive_attr])
+            f_metrics = calculate_fairness_metrics(
+                true_labels=attr_labels,
+                predicted_labels=pred_indices,
+                sensitive_values=sensitive_values,
+                sensitive_attr_name=sensitive_attr,
+                target_attr_name=attr_name,
+            )
+            fairness_report[attr_name][sensitive_attr] = f_metrics
+
+            if "error" not in f_metrics:
+                sig = f_metrics["statistical_significance"]["significant"]
+                p_val = f_metrics["statistical_significance"]["p_value"]
+                acc_gap = f_metrics["accuracy_gap"]
+
+                sig_str = "*" if sig else ""
+                print(
+                    f"  > vs {sensitive_attr}: Acc Gap={acc_gap:.1%} (p={p_val:.3f}){sig_str}"
+                )
 
         all_true_labels_flat.extend(attr_labels)
         all_scores_flat.extend(attr_scores)
@@ -81,6 +118,13 @@ def main(args):
     with open(output_path, "wb") as f:
         pickle.dump(final_metrics, f)
     print(f"\nResults saved to {output_path}")
+
+    fairness_filename = (
+        f"celeba_fairness_{model_name_safe}_partition{partition_str}.pkl"
+    )
+    fairness_path = config.OUTPUT_DIR / fairness_filename
+    with open(fairness_path, "wb") as f:
+        pickle.dump(fairness_report, f)
 
 
 if __name__ == "__main__":
