@@ -282,9 +282,7 @@ class CelebAAttributeLoader(BaseDatasetLoader):
     for each (image, attribute) pair.
     """
 
-    def __init__(
-        self, partition_num: int = 2, sensitive_attributes: List[str] | str = []
-    ):
+    def __init__(self, partition_num: int = 2, sensitive_attributes: List[str] = []):
         """
         Args:
             partition_num (int): The partition to use (0: train, 1: val, 2: test, -1: all).
@@ -294,51 +292,7 @@ class CelebAAttributeLoader(BaseDatasetLoader):
         self.partition_filepath = config.CELEBA_PARTITION_FILE
         self.image_dir = config.CELEBA_IMAGE_DIR
         self.partition_num = partition_num
-        if sensitive_attributes == "all":
-            self.sensitive_attrs = [
-                "5_o_Clock_Shadow",
-                "Arched_Eyebrows",
-                "Attractive",
-                "Bags_Under_Eyes",
-                "Bald",
-                "Bangs",
-                "Big_Lips",
-                "Big_Nose",
-                "Black_Hair",
-                "Blond_Hair",
-                "Blurry",
-                "Brown_Hair",
-                "Bushy_Eyebrows",
-                "Chubby",
-                "Double_Chin",
-                "Eyeglasses",
-                "Goatee",
-                "Gray_Hair",
-                "Heavy_Makeup",
-                "High_Cheekbones",
-                "Male",
-                "Mouth_Slightly_Open",
-                "Mustache",
-                "Narrow_Eyes",
-                "No_Beard",
-                "Oval_Face",
-                "Pale_Skin",
-                "Pointy_Nose",
-                "Receding_Hairline",
-                "Rosy_Cheeks",
-                "Sideburns",
-                "Smiling",
-                "Straight_Hair",
-                "Wavy_Hair",
-                "Wearing_Earrings",
-                "Wearing_Hat",
-                "Wearing_Lipstick",
-                "Wearing_Necklace",
-                "Wearing_Necktie",
-                "Young",
-            ]
-        else:
-            self.sensitive_attrs = sensitive_attributes
+        self.sensitive_attrs = sensitive_attributes
 
     def load(self) -> List[Dict[str, Any]]:
         attr_df = pd.read_csv(self.attr_filepath)
